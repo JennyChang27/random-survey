@@ -8,7 +8,7 @@
 
 
 const urls = [
-	'https://hhming.moe',
-	'https://github.com/hms5232',
-	'https://gitlab.com/hms5232',
+	'https://researcher-help.prolific.com/en/article/2d1a27',
+	'https://scholar.google.com/',
+	'https://www.google.com/imghp?hl=zh-TW&tab=ri&ogbl',
 ];
