@@ -14,11 +14,12 @@ const urls = [
     'https://www.surveycake.com/s/NNY2L',
 ];
 
-  var perGroupLimit = 2;  // 每組上限
-  var totalLimit = urls.length * perGroupLimit;  // 總上限
+  
+  var perGroupLimit = 2;  // 每組上限//
+  var totalLimit = urls.length * perGroupLimit;  // 總上限//
 
-  // 指定要操作的 Spreadsheet ID
-  var spreadsheetId = '請填入你的Spreadsheet ID';
+  // 指定要操作的 Spreadsheet ID//
+  var spreadsheetId = '1pqXw8LG2Wbvf9zYIl0si4FbDQ0KIF91FFzNlDkFgLnI';
   var ss = SpreadsheetApp.openById(spreadsheetId);
   var sheet = ss.getActiveSheet();
 
@@ -29,13 +30,13 @@ const urls = [
     data = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
   }
 
-  // 初始化計數
+  // 初始化計數//
   var counts = {};
   for (var i = 0; i < urls.length; i++) {
     counts[urls[i]] = 0;
   }
 
-  // 統計目前各組人數
+  // 統計目前各組人數//
   for (var r = 0; r < data.length; r++) {
     var v = data[r][0];
     if (v) {
@@ -47,7 +48,7 @@ const urls = [
     }
   }
 
-  // 計算總已分配人數
+  // 計算總已分配人數//
   var totalAssigned = 0;
   for (var key in counts) {
     if (counts.hasOwnProperty(key)) {
@@ -55,13 +56,13 @@ const urls = [
     }
   }
 
-  // 如果已滿額，回傳已額滿頁面
+  // 如果已滿額，回傳已額滿頁面//
   if (totalAssigned >= totalLimit) {
     var fullHtml = '<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;text-align:center;padding:40px;"><h2>感謝參與，本研究已額滿！</h2><p>謝謝你的時間。</p></body></html>';
     return HtmlService.createHtmlOutput(fullHtml);
   }
 
-  // 找出還有名額的選項
+  // 找出還有名額的選項//
   var available = [];
   for (var j = 0; j < urls.length; j++) {
     if (counts[urls[j]] < perGroupLimit) {
@@ -69,16 +70,16 @@ const urls = [
     }
   }
 
-  // 隨機分配一個 available
+  // 隨機分配一個 available//
   var assignedUrl = available[Math.floor(Math.random() * available.length)];
 
-  // 在 Sheet 記錄（Timestamp, AssignedURL）
+  // 在 Sheet 記錄（Timestamp, AssignedURL）//
   sheet.appendRow([new Date(), assignedUrl]);
 
-  // 安全處理 assignedUrl
+  // 安全處理 assignedUrl //
   var safeUrl = assignedUrl.replace(/"/g, '\\"');
 
-  // client-side redirect
+  // client-side redirect //
   var redirectHtml = '<!doctype html><html><head><meta charset="utf-8"></head><body><script>window.location.replace("' + safeUrl + '");</script><noscript>Please enable JavaScript or click <a href="' + safeUrl + '">here</a>.</noscript></body></html>';
   return HtmlService.createHtmlOutput(redirectHtml);
 }
