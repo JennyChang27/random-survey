@@ -1,85 +1,72 @@
-/*
- * 將要隨機派發的網址放入下方（不需排序）
- *
- * 並請注意：
- * 1. 網址請用引號（或稱「撇號」，單引號或雙引號皆可）包起來
- * 2. 包起來的網址之間用逗號分隔
- */
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Random Survey Redirect</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <h2>請稍候...</h2>
 
+  <script>
+    // 1️⃣ Firebase 初始化，填入你的專案資訊
+    const firebaseConfig = {
+  apiKey: "AIzaSyDwNLmo8CbUy_yz8Phay5ugxBVnsTWxrtc",
+  authDomain: "random-survey-abe86.firebaseapp.com",
+  projectId: "random-survey-abe86",
+  storageBucket: "random-survey-abe86.firebasestorage.app",
+  messagingSenderId: "586364937583",
+  appId: "1:586364937583:web:1b95dbb866c3305230f49a",
+  measurementId: "G-SC7Q6VY1RS"
+};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-const urls = [
-	'https://www.surveycake.com/s/PwOV2',
-    'https://www.surveycake.com/s/oN0Q3',
-    'https://www.surveycake.com/s/e2m86',
-    'https://www.surveycake.com/s/NNY2L',
-];
+    const perGroupLimit = 50; // 每組人數上限
 
-  
-  var perGroupLimit = 2;  // 每組上限//
-  var totalLimit = urls.length * perGroupLimit;  // 總上限//
+    async function assignGroup() {
+      // 讀取 surveyGroups collection
+      const snapshot = await db.collection('surveyGroups').get();
+      const groups = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.count < perGroupLimit) {
+          groups.push({id: doc.id, ...data});
+        }
+      });
 
-  // 指定要操作的 Spreadsheet ID//
-  var spreadsheetId = '1pqXw8LG2Wbvf9zYIl0si4FbDQ0KIF91FFzNlDkFgLnI';
-  var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getActiveSheet();
-
-  var lastRow = sheet.getLastRow();
-  var data = [];
-
-  if (lastRow > 1) {
-    data = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
-  }
-
-  // 初始化計數//
-  var counts = {};
-  for (var i = 0; i < urls.length; i++) {
-    counts[urls[i]] = 0;
-  }
-
-  // 統計目前各組人數//
-  for (var r = 0; r < data.length; r++) {
-    var v = data[r][0];
-    if (v) {
-      if (counts.hasOwnProperty(v)) {
-        counts[v] += 1;
-      } else {
-        counts[v] = 1;
+      if (groups.length === 0) {
+        document.body.innerHTML = "<h2>感謝參與，本研究已額滿！</h2>";
+        return;
       }
+
+      // 隨機分派一組
+      const chosen = groups[Math.floor(Math.random() * groups.length)];
+
+      // Firestore transaction 增加 count
+      const groupRef = db.collection('surveyGroups').doc(chosen.id);
+      await db.runTransaction(async (t) => {
+        const doc = await t.get(groupRef);
+        const currentCount = doc.data().count;
+        if (currentCount >= perGroupLimit) {
+          throw "Full"; // 若有人先搶滿，重新分派
+        }
+        t.update(groupRef, {count: currentCount + 1});
+      });
+
+      // 導向 SurveyCake
+      window.location.href = chosen.url;
     }
-  }
 
-  // 計算總已分配人數//
-  var totalAssigned = 0;
-  for (var key in counts) {
-    if (counts.hasOwnProperty(key)) {
-      totalAssigned += counts[key];
-    }
-  }
-
-  // 如果已滿額，回傳已額滿頁面//
-  if (totalAssigned >= totalLimit) {
-    var fullHtml = '<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;text-align:center;padding:40px;"><h2>感謝參與，本研究已額滿！</h2><p>謝謝你的時間。</p></body></html>';
-    return HtmlService.createHtmlOutput(fullHtml);
-  }
-
-  // 找出還有名額的選項//
-  var available = [];
-  for (var j = 0; j < urls.length; j++) {
-    if (counts[urls[j]] < perGroupLimit) {
-      available.push(urls[j]);
-    }
-  }
-
-  // 隨機分配一個 available//
-  var assignedUrl = available[Math.floor(Math.random() * available.length)];
-
-  // 在 Sheet 記錄（Timestamp, AssignedURL）//
-  sheet.appendRow([new Date(), assignedUrl]);
-
-  // 安全處理 assignedUrl //
-  var safeUrl = assignedUrl.replace(/"/g, '\\"');
-
-  // client-side redirect //
-  var redirectHtml = '<!doctype html><html><head><meta charset="utf-8"></head><body><script>window.location.replace("' + safeUrl + '");</script><noscript>Please enable JavaScript or click <a href="' + safeUrl + '">here</a>.</noscript></body></html>';
-  return HtmlService.createHtmlOutput(redirectHtml);
-}
+    assignGroup().catch(err => {
+      if (err === "Full") {
+        window.location.reload(); // 若有人先占滿，重新分派
+      } else {
+        console.error(err);
+        document.body.innerHTML = "<h2>發生錯誤，請稍後再試。</h2>";
+      }
+    });
+  </script>
+</body>
+</html>
